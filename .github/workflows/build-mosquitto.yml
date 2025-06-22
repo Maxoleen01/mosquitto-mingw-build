@@ -1,0 +1,35 @@
+name: Build Mosquitto for Windows MinGW
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Mosquitto source
+      run: git clone --depth 1 https://github.com/eclipse/mosquitto.git
+
+    - name: Install MSYS2 and dependencies
+      run: |
+        choco install msys2 --yes
+        refreshenv
+        ridk install 1 2 3
+
+    - name: Setup MSYS2 environment and build
+      shell: msys2 {0}
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-libwebsockets mingw-w64-x86_64-openssl mingw-w64-x86_64-curl mingw-w64-x86_64-mosquitto
+
+        cd mosquitto
+        mkdir build && cd build
+        cmake -G "MSYS Makefiles" ..
+        make
+
+    - name: Upload built library
+      uses: actions/upload-artifact@v3
+      with:
+        name: libmosquitto-win64
+        path: mosquitto/build/libmosquitto.a
